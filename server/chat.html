@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Chat</title>
+</head>
+
+<body>
+    <h1>WebSocket Chat Example</h1>
+
+    <input id="playercount" style="display:block; width:100px; box-sizing: border-box" type="text"
+        placeholder="player count">
+    <button id="create" type="button">Create Game</button>
+    <input id="gameid" style="display:block; width:100px; box-sizing: border-box" type="text" placeholder="gameid">
+    <input id="username" style="display:block; width:100px; box-sizing: border-box" type="text" placeholder="username">
+    <button id="join-chat" type="button">Join Game</button>
+
+    <button id="roll" type="button" disabled="true">Roll</button>
+
+    <div class="field"></div>
+
+    <table>
+        <tr>
+            <th>Color</th>
+            <th>Player</th>
+            <th>You?</th>
+        </tr>
+        <tr>
+            <th>Yellow</th>
+            <th id="player1_name"></th>
+            <th id="player1_you">False</th>
+        </tr>
+        <tr>
+            <th>Green</th>
+            <th id="player2_name"></th>
+            <th id="player2_you">False</th>
+        </tr>
+        <tr>
+            <th>Red</th>
+            <th id="player3_name"></th>
+            <th id="player3_you">False</th>
+        </tr>
+        <tr>
+            <th>Black</th>
+            <th id="player4_name"></th>
+            <th id="player4_you">False</th>
+        </tr>
+    </table>
+
+    <style>
+        .field {
+            display: grid;
+            grid-template-columns: repeat(11, 35px);
+            grid-template-rows: repeat(11, 35px);
+        }
+
+        .entry {
+            width: 30px;
+            height: 30px;
+            border-radius: 17px;
+            border-width: 2px;
+            border-style: solid;
+        }
+
+        .figure {
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            margin-left: 9px;
+            margin-top: 9px;
+            border-width: 2px;
+            border-style: solid;
+            border-color: black;
+
+            transition: all 1s;
+        }
+
+        .normalslot {
+            border-color: black;
+        }
+
+        .start1,
+        .player1 {
+            background-color: yellow;
+        }
+
+        .start2,
+        .player2 {
+            background-color: green;
+        }
+
+        .start3,
+        .player3 {
+            background-color: red;
+        }
+
+        .start4,
+        .player4 {
+            background-color: black;
+        }
+    </style>
+
+    <script>
+        let player = 0;
+        let can_move = false;
+
+        const slots = [
+            [1, 5],
+            [2, 5],
+            [3, 5],
+            [4, 5],
+            [5, 5],
+            [5, 4],
+            [5, 3],
+            [5, 2],
+            [5, 1],
+            [6, 1],
+            [7, 1],
+            [7, 2],
+            [7, 3],
+            [7, 4],
+            [7, 5],
+            [8, 5],
+            [9, 5],
+            [10, 5],
+            [11, 5],
+            [11, 6],
+            [11, 7],
+            [10, 7],
+            [9, 7],
+            [8, 7],
+            [7, 7],
+            [7, 8],
+            [7, 9],
+            [7, 10],
+            [7, 11],
+            [6, 11],
+            [5, 11],
+            [5, 10],
+            [5, 9],
+            [5, 8],
+            [5, 7],
+            [4, 7],
+            [3, 7],
+            [2, 7],
+            [1, 7],
+            [1, 6],
+        ];
+        const start_slots = [
+            [[1, 1], [1, 2], [2, 1], [2, 2]],
+            [[10, 1], [10, 2], [11, 1], [11, 2]],
+            [[10, 10], [10, 11], [11, 10], [11, 11]],
+            [[1, 10], [1, 11], [2, 10], [2, 11]]
+        ];
+        const final_slots = [
+            [[2, 6], [3, 6], [4, 6], [5, 6]],
+            [[6, 2], [6, 3], [6, 4], [6, 5]],
+            [[10, 6], [9, 6], [8, 6], [7, 6]],
+            [[6, 10], [6, 9], [6, 8], [6, 7]],
+        ];
+
+        const field = document.querySelector(".field");
+
+        for (let x = 0; x < 11; x++) {
+            for (let y = 0; y < 11; y++) {
+                let elem = document.createElement('div');
+                elem.classList.add("entry");
+
+                if (!((x < 4 || x > 6) && (y < 4 || y > 6)) && (x != 5 || (x == 5 && (y == 0 || y == 10))) && (y != 5 || (y == 5 && (x == 0 || x == 10)))) {
+                    elem.classList.add("normalslot");
+                } else if (x < 2 && y < 2) {
+                    elem.classList.add("start1");
+                } else if (x > 8 && y < 2) {
+                    elem.classList.add("start2");
+                } else if (x > 8 && y > 8) {
+                    elem.classList.add("start3");
+                } else if (x < 2 && y > 8) {
+                    elem.classList.add("start4");
+                } else {
+                    continue;
+                }
+
+                elem.style.cssText += "grid-row-start: " + (y + 1) + ";";
+                elem.style.cssText += "grid-column-start: " + (x + 1) + ";";
+                field.appendChild(elem);
+            }
+        }
+
+        const player_figures = [
+            [-1, -2, -3, -4],
+            [-1, -2, -3, -4],
+            [-1, -2, -3, -4],
+            [-1, -2, -3, -4],
+        ];
+
+        let player_elements = [];
+        for (let pi = 0; pi < 4; pi++) {
+            let flist = [];
+            for (let fi = 0; fi < 4; fi++) {
+                let entry = document.createElement('button');
+                entry.classList.add('player' + (pi + 1));
+                entry.classList.add('figure');
+                entry.onclick = () => {
+                    if (pi != player) {
+                        return;
+                    }
+                    if (!can_move) {
+                        return;
+                    }
+
+                    websocket.send(JSON.stringify({ "Move": { "figure": fi } }));
+
+                    can_move = false;
+                };
+                field.appendChild(entry);
+                flist.push(entry);
+            }
+            player_elements.push(flist);
+        }
+
+        function positionFigures() {
+            for (let pi = 0; pi < 4; pi++) {
+                for (let fi = 0; fi < 4; fi++) {
+                    let raw = player_figures[pi][fi];
+
+                    if (raw < 0) {
+                        let player_start_slots = start_slots[pi];
+                        let fslot = player_start_slots[Math.abs(raw + 1)];
+
+                        player_elements[pi][fi].style.cssText = "grid-row-start: " + fslot[1] + ";grid-column-start:" + fslot[0] + ";";
+                    } else if (raw < slots.length) {
+                        let fslot = slots[(raw + pi * 10) % slots.length];
+
+                        player_elements[pi][fi].style.cssText = "grid-row-start: " + fslot[1] + ";grid-column-start:" + fslot[0] + ";";
+                    } else {
+                        let inhouse = raw - 40;
+
+                        let player_final_slots = final_slots[pi];
+                        let fslot = player_final_slots[inhouse];
+
+                        player_elements[pi][fi].style.cssText = "grid-row-start: " + fslot[1] + ";grid-column-start:" + fslot[0] + ";";
+                    }
+                }
+            }
+        }
+        positionFigures();
+
+        const playercount = document.querySelector("#playercount");
+        const gameid = document.querySelector("#gameid");
+        const username = document.querySelector("#username");
+        const join_btn = document.querySelector("#join-chat");
+        const roll = document.querySelector("#roll");
+
+        const create_btn = document.querySelector("#create");
+        create_btn.addEventListener("click", function (e) {
+            fetch("/create", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    players: Number(playercount.value),
+                }),
+            }).then(function (response) {
+                return response.text();
+            }).then(function (data) {
+                gameid.value = data;
+            }).catch(function (err) {
+                console.log('Fetch Error :-S', err);
+            });
+        });
+
+
+        let websocket = null;
+
+        join_btn.addEventListener("click", function (e) {
+            this.disabled = true;
+
+            websocket = new WebSocket("ws://localhost:3000/websocket/" + gameid.value + "/" + username.value);
+
+            websocket.onopen = function () {
+                console.log("connection opened");
+                // websocket.send(username.value);
+            }
+
+            const btn = this;
+
+            websocket.onclose = function () {
+                console.log("connection closed");
+                btn.disabled = false;
+            }
+
+            websocket.onmessage = function (e) {
+                const msg = e.data;
+                if (msg == "\"Turn\"") {
+                    roll.disabled = false;
+                }
+
+                const json_msg = JSON.parse(msg);
+                if (json_msg.Rolled != undefined) {
+                    const rolled = json_msg.Rolled;
+                    console.log(rolled);
+
+                    if (rolled.can_move) {
+                        console.log("Click on Player to move");
+                        can_move = true;
+                    }
+                } else if (json_msg.State != undefined) {
+                    const state = json_msg.State;
+
+                    const state_players = state.players;
+                    for (let pi = 0; pi < state_players.length; pi++) {
+                        const pfigures = state_players[pi][1];
+
+                        for (let fi = 0; fi < 4; fi++) {
+                            if (pfigures[fi] == "InStart") {
+                                player_figures[pi][fi] = -(fi + 1);
+                            } else if (pfigures[fi].OnField != undefined) {
+                                const onfield = pfigures[fi].OnField;
+                                player_figures[pi][fi] = onfield.moved;
+                            } else if (pfigures[fi].InHouse != undefined) {
+                                const inhouse = pfigures[fi].InHouse;
+                                player_figures[pi][fi] = 40 + inhouse.pos;
+                            }
+                        }
+                    }
+
+                    positionFigures();
+                } else if (json_msg.IndicatePlayer != undefined) {
+                    const indicator = json_msg.IndicatePlayer;
+
+                    if (indicator.you) {
+                        player = indicator.player;
+
+                        document.querySelector("#player" + (indicator.player + 1) + "_you").textContent = "True";
+                    }
+
+                    let name_selector = "#player" + (indicator.player + 1) + "_name";
+                    document.querySelector(name_selector).textContent = indicator.name;
+                } else {
+                    console.log(json_msg);
+                }
+            }
+        });
+
+        roll.addEventListener("click", function (e) {
+            console.log("Roll");
+            websocket.send("\"Roll\"");
+            this.disabled = true;
+        });
+    </script>
+</body>
+
+</html>
