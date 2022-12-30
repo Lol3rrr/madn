@@ -9,12 +9,16 @@
 <body>
     <h1>Mensch Ärger Dich Nicht</h1>
 
-    <input id="playercount" style="display:block; width:100px; box-sizing: border-box" type="text"
-        placeholder="player count">
-    <button id="create" type="button">Create Game</button>
+    <div>
+        <input id="playercount" style="display:block; width:100px; box-sizing: border-box" type="text"
+            placeholder="player count">
+        <button id="create" type="button">Create Game</button>
+    </div>
+
     <input id="gameid" style="display:block; width:100px; box-sizing: border-box" type="text" placeholder="gameid">
     <input id="username" style="display:block; width:100px; box-sizing: border-box" type="text" placeholder="username">
     <button id="join-chat" type="button">Join Game</button>
+    <span id="message"></span>
 
     <button id="roll" type="button" disabled="true">Roll</button>
 
@@ -251,6 +255,7 @@
         const username = document.querySelector("#username");
         const join_btn = document.querySelector("#join-chat");
         const roll = document.querySelector("#roll");
+        const message = document.querySelector("#message");
 
         const create_btn = document.querySelector("#create");
         create_btn.addEventListener("click", function (e) {
@@ -295,6 +300,8 @@
                 const msg = e.data;
                 if (msg == "\"Turn\"") {
                     roll.disabled = false;
+
+                    message.textContent = "Your Turn";
                 }
 
                 const json_msg = JSON.parse(msg);
@@ -302,9 +309,12 @@
                     const rolled = json_msg.Rolled;
                     console.log(rolled);
 
+                    message.textContent = "Rolled " + rolled.value + ".";
+
                     if (rolled.can_move) {
                         console.log("Click on Player to move");
                         can_move = true;
+                        message.textContent += " Click on Figure to move";
                     }
                 } else if (json_msg.State != undefined) {
                     const state = json_msg.State;
@@ -338,6 +348,14 @@
 
                     let name_selector = "#player" + (indicator.player + 1) + "_name";
                     document.querySelector(name_selector).textContent = indicator.name;
+                } else if (json_msg.PlayerDone != undefined) {
+                    const player_done = json_msg.PlayerDone;
+
+                    alert("Player " + player_done.player + " is done");
+                } else if (json_msg.GameDone != undefined) {
+                    const game_done = json_msg.GameDone;
+
+                    alert("Game is Done\nRanking: " + game_done.ranking);
                 } else {
                     console.log(json_msg);
                 }

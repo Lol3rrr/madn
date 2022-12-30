@@ -392,7 +392,9 @@ async fn start_session(
                     GameState::StartTurn
                 }
             }
-            GameState::Done => GameState::Done,
+            GameState::Done => {
+                return;
+            }
         };
 
         gamestate = next_state;
