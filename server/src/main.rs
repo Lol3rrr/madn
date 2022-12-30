@@ -70,7 +70,7 @@ async fn websocket_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
 ) -> axum::response::Response {
-    tracing::error!("{:?}", session);
+    tracing::trace!("Websocket connection for {:?}", session);
 
     let sessions = state.sessions.lock().unwrap();
 
@@ -95,7 +95,7 @@ async fn create(
     State(state): State<Arc<AppState>>,
     Json(content): Json<CreateRequest>,
 ) -> impl IntoResponse {
-    tracing::warn!("{:?}", content);
+    tracing::trace!("Create Game {:?}", content);
 
     let gameid = Uuid::new_v4();
 

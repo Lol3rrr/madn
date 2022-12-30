@@ -9,15 +9,21 @@
 <body>
     <h1>Mensch Ärger Dich Nicht</h1>
 
-    <div>
+    <div id="create-game-div">
         <input id="playercount" style="display:block; width:100px; box-sizing: border-box" type="text"
             placeholder="player count">
         <button id="create" type="button">Create Game</button>
     </div>
 
-    <input id="gameid" style="display:block; width:100px; box-sizing: border-box" type="text" placeholder="gameid">
-    <input id="username" style="display:block; width:100px; box-sizing: border-box" type="text" placeholder="username">
-    <button id="join-chat" type="button">Join Game</button>
+    <div id="join-game-div">
+        <input id="gameid" style="display:block; width:100px; box-sizing: border-box" type="hidden"
+            placeholder="gameid">
+        <input id="username" style="display:block; width:100px; box-sizing: border-box" type="text"
+            placeholder="username">
+        <button id="join-chat" type="button">Join Game</button>
+    </div>
+
+    <p id="join-url"></p>
     <span id="message"></span>
 
     <button id="roll" type="button" disabled="true">Roll</button>
@@ -67,6 +73,46 @@
             border-style: solid;
         }
 
+        @keyframes moveright {
+            from {
+                transform: translateX(0px);
+            }
+
+            to {
+                transform: translateX(36px);
+            }
+        }
+
+        @keyframes moveleft {
+            from {
+                transform: translateX(0px);
+            }
+
+            to {
+                transform: translateX(-36px);
+            }
+        }
+
+        @keyframes moveup {
+            from {
+                transform: translateY(0px);
+            }
+
+            to {
+                transform: translateY(-36px);
+            }
+        }
+
+        @keyframes movedown {
+            from {
+                transform: translateY(0px);
+            }
+
+            to {
+                transform: translateY(36px);
+            }
+        }
+
         .figure {
             width: 16px;
             height: 16px;
@@ -77,7 +123,29 @@
             border-style: solid;
             border-color: black;
 
-            transition: all 1s;
+            animation-duration: 0.5s;
+            animation-play-state: paused;
+            animation-iteration-count: infinite;
+        }
+
+        .move-right {
+            animation-name: moveright;
+            animation-play-state: running;
+        }
+
+        .move-left {
+            animation-name: moveleft;
+            animation-play-state: running;
+        }
+
+        .move-up {
+            animation-name: moveup;
+            animation-play-state: running;
+        }
+
+        .move-down {
+            animation-name: movedown;
+            animation-play-state: running;
         }
 
         .normalslot {
@@ -223,27 +291,114 @@
             player_elements.push(flist);
         }
 
+        function comp_array(first, second) {
+            if (first.length != second.length) {
+                return false;
+            }
+
+            for (let i = 0; i < first.length; i++) {
+                if (first[i] != second[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        function toPositionString(row, column) {
+            return "grid-row-start: " + row + "; grid-column-start: " + column + ";"
+        }
+
         function positionFigures() {
             for (let pi = 0; pi < 4; pi++) {
                 for (let fi = 0; fi < 4; fi++) {
                     let raw = player_figures[pi][fi];
 
+                    let fslot;
+                    let onfield = false;
                     if (raw < 0) {
                         let player_start_slots = start_slots[pi];
-                        let fslot = player_start_slots[Math.abs(raw + 1)];
-
-                        player_elements[pi][fi].style.cssText = "grid-row-start: " + fslot[1] + ";grid-column-start:" + fslot[0] + ";";
+                        fslot = player_start_slots[Math.abs(raw + 1)];
                     } else if (raw < slots.length) {
-                        let fslot = slots[(raw + pi * 10) % slots.length];
-
-                        player_elements[pi][fi].style.cssText = "grid-row-start: " + fslot[1] + ";grid-column-start:" + fslot[0] + ";";
+                        fslot = slots[(raw + pi * 10) % slots.length];
+                        onfield = true;
                     } else {
                         let inhouse = raw - 40;
 
                         let player_final_slots = final_slots[pi];
-                        let fslot = player_final_slots[inhouse];
+                        fslot = player_final_slots[inhouse];
+                    }
 
-                        player_elements[pi][fi].style.cssText = "grid-row-start: " + fslot[1] + ";grid-column-start:" + fslot[0] + ";";
+                    const new_text = "grid-row-start: " + fslot[1] + "; grid-column-start: " + fslot[0] + ";";
+                    if (onfield && player_elements[pi][fi].style.cssText.valueOf() !== new_text.valueOf()) {
+                        const previous_row_regex = /grid-row-start: ([0-9]+);/m;
+                        const previous_column_regex = /grid-column-start: ([0-9]+);/m;
+                        const row_found = player_elements[pi][fi].style.cssText.valueOf().match(previous_row_regex)[1];
+                        const column_found = player_elements[pi][fi].style.cssText.valueOf().match(previous_column_regex)[1];
+
+                        const delta_v = fslot[1] - row_found;
+                        const delta_h = fslot[0] - column_found;
+
+                        const steps = Math.abs(delta_v) + Math.abs(delta_h);
+                        let step_count = 0;
+
+                        let current_slot = -1;
+                        for (var i = 0; i < slots.length; i++) {
+                            if (comp_array(slots[i], [column_found, row_found])) {
+                                current_slot = i;
+                                break;
+                            }
+                        }
+                        console.log([column_found, row_found] + " - " + slots + " => " + current_slot);
+                        if (current_slot != -1) {
+                            const int_id = setInterval(() => {
+                                let next_slot = (current_slot + 1) % slots.length;
+                                console.log("From Slot: " + current_slot + " To: " + next_slot);
+
+                                let src_pos = slots[current_slot];
+                                let next_pos = slots[next_slot];
+
+                                player_elements[pi][fi].style.cssText = toPositionString(src_pos[1], src_pos[0]);
+
+                                if (src_pos[0] < next_pos[0]) {
+                                    player_elements[pi][fi].classList.add("move-right");
+                                    player_elements[pi][fi].classList.remove("move-left");
+                                } else if (src_pos[0] > next_pos[0]) {
+                                    player_elements[pi][fi].classList.add("move-left");
+                                    player_elements[pi][fi].classList.remove("move-right");
+                                } else {
+                                    player_elements[pi][fi].classList.remove("move-right");
+                                    player_elements[pi][fi].classList.remove("move-left");
+                                }
+
+                                if (src_pos[1] < next_pos[1]) {
+                                    player_elements[pi][fi].classList.add("move-down");
+                                    player_elements[pi][fi].classList.remove("move-up");
+                                } else if (src_pos[1] > next_pos[1]) {
+                                    player_elements[pi][fi].classList.add("move-up");
+                                    player_elements[pi][fi].classList.remove("move-down");
+                                } else {
+                                    player_elements[pi][fi].classList.remove("move-up");
+                                    player_elements[pi][fi].classList.remove("move-down");
+                                }
+
+                                current_slot = (current_slot + 1) % slots.length;
+                                step_count++;
+                                if (step_count == steps + 1) {
+                                    clearInterval(int_id);
+                                    player_elements[pi][fi].style.cssText = new_text;
+                                    player_elements[pi][fi].classList.remove("move-right");
+                                    player_elements[pi][fi].classList.remove("move-left");
+                                    player_elements[pi][fi].classList.remove("move-up");
+                                    player_elements[pi][fi].classList.remove("move-down");
+
+                                    return
+                                }
+                            }, 500);
+                        } else {
+                            player_elements[pi][fi].style.cssText = new_text;
+                        }
+                    } else {
+                        player_elements[pi][fi].style.cssText = new_text;
                     }
                 }
             }
@@ -256,6 +411,16 @@
         const join_btn = document.querySelector("#join-chat");
         const roll = document.querySelector("#roll");
         const message = document.querySelector("#message");
+        const joinurl = document.querySelector("#join-url");
+
+        const queryString = window.location.search;
+        const queryParams = new URLSearchParams(queryString);
+        if (queryParams.has('join')) {
+            const join_id = queryParams.get('join');
+            window.history.replaceState({}, document.title, "/");
+
+            gameid.value = join_id;
+        }
 
         const create_btn = document.querySelector("#create");
         create_btn.addEventListener("click", function (e) {
@@ -271,6 +436,7 @@
                 return response.text();
             }).then(function (data) {
                 gameid.value = data;
+                joinurl.textContent = window.location.href + "?join=" + data;
             }).catch(function (err) {
                 console.log('Fetch Error :-S', err);
             });
@@ -286,7 +452,6 @@
 
             websocket.onopen = function () {
                 console.log("connection opened");
-                // websocket.send(username.value);
             }
 
             const btn = this;
