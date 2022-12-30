@@ -448,7 +448,7 @@
         join_btn.addEventListener("click", function (e) {
             this.disabled = true;
 
-            websocket = new WebSocket("ws://localhost:3000/websocket/" + gameid.value + "/" + username.value);
+            websocket = new WebSocket("ws://" + window.location.host + "/websocket/" + gameid.value + "/" + username.value);
 
             websocket.onopen = function () {
                 console.log("connection opened");
