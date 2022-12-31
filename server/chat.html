@@ -9,6 +9,8 @@
 <body>
     <h1>Mensch Ärger Dich Nicht</h1>
 
+    <button id="rejoin" type="button">Rejoin</button>
+
     <div id="create-game-div">
         <input id="playercount" style="display:block; width:100px; box-sizing: border-box" type="text"
             placeholder="player count">
@@ -412,6 +414,7 @@
         const roll = document.querySelector("#roll");
         const message = document.querySelector("#message");
         const joinurl = document.querySelector("#join-url");
+        const rejoin_btn = document.querySelector("#rejoin");
 
         const queryString = window.location.search;
         const queryParams = new URLSearchParams(queryString);
@@ -424,6 +427,8 @@
 
         const create_btn = document.querySelector("#create");
         create_btn.addEventListener("click", function (e) {
+            window.localStorage.removeItem('rejoin');
+
             fetch("/create", {
                 method: 'POST',
                 headers: {
@@ -445,20 +450,27 @@
 
         let websocket = null;
 
-        join_btn.addEventListener("click", function (e) {
-            this.disabled = true;
+        function joingame(game_id, name) {
+            websocket = new WebSocket("ws://" + window.location.host + "/join/" + game_id + "/" + name);
+            setup_ws(game_id);
+        }
 
-            websocket = new WebSocket("ws://" + window.location.host + "/websocket/" + gameid.value + "/" + username.value);
+        function rejoin(game, key) {
+            console.log("Rejoin-Game: " + game + " Rejoin-Key: " + key);
 
+            websocket = new WebSocket("ws://" + window.location.host + "/rejoin/" + game + "/" + key);
+            setup_ws(game);
+        }
+
+        function setup_ws(game_id) {
             websocket.onopen = function () {
                 console.log("connection opened");
-            }
 
-            const btn = this;
+                window.localStorage.setItem('game', game_id);
+            }
 
             websocket.onclose = function () {
                 console.log("connection closed");
-                btn.disabled = false;
             }
 
             websocket.onmessage = function (e) {
@@ -520,11 +532,22 @@
                 } else if (json_msg.GameDone != undefined) {
                     const game_done = json_msg.GameDone;
 
+                    window.localStorage.removeItem('rejoin');
                     alert("Game is Done\nRanking: " + game_done.ranking);
+                } else if (json_msg.RejoinCode != undefined) {
+                    const rejoin_code = json_msg.RejoinCode;
+
+                    window.localStorage.setItem('rejoin', rejoin_code.code);
                 } else {
                     console.log(json_msg);
                 }
             }
+        }
+
+        join_btn.addEventListener("click", function (e) {
+            this.disabled = true;
+
+            joingame(gameid.value, username.value)
         });
 
         roll.addEventListener("click", function (e) {
@@ -532,6 +555,15 @@
             websocket.send("\"Roll\"");
             this.disabled = true;
         });
+
+        if (window.localStorage.getItem('rejoin') != undefined) {
+            rejoin_btn.addEventListener("click", function (e) {
+                const key = window.localStorage.getItem('rejoin');
+                const game = window.localStorage.getItem('game');
+
+                rejoin(game, key);
+            });
+        }
     </script>
 </body>
 

@@ -10,6 +10,14 @@ use futures::{
 use rand::{Rng, SeedableRng};
 use serde_derive::{Deserialize, Serialize};
 
+pub mod statemachine;
+
+#[derive(Debug, PartialEq)]
+pub enum GameError {
+    Disconnect,
+    Other(&'static str),
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Figure {
     InStart,
@@ -25,6 +33,10 @@ pub enum GameRequest {
 
 #[derive(Debug, Serialize)]
 pub enum GameResponse {
+    RejoinCode {
+        game: uuid::Uuid,
+        code: uuid::Uuid,
+    },
     IndicatePlayer {
         player: usize,
         name: String,
@@ -52,6 +64,7 @@ pub struct GamePlayer<Tx, Rx> {
     pub recv: Rx,
     pub figures: [Figure; 4],
     done: bool,
+    rejoin_code: uuid::Uuid,
 }
 
 impl<Tx, Rx> GamePlayer<Tx, Rx>
@@ -77,13 +90,13 @@ where
         self.done
     }
 
-    pub async fn send_resp(&mut self, resp: &GameResponse) -> Result<(), ()> {
+    pub async fn send_resp(&mut self, resp: &GameResponse) -> Result<(), GameError> {
         let content = serde_json::to_string(resp).unwrap();
         match self.send.send(Message::Text(content)).await {
             Ok(_) => Ok(()),
             Err(e) => {
                 tracing::error!("{:?}", e);
-                Err(())
+                Err(GameError::Disconnect)
             }
         }
     }
@@ -161,11 +174,12 @@ where
         }
 
         self.done = true;
-        return true;
+        true
     }
 }
 
 pub struct Game {
+    id: uuid::Uuid,
     pub players: Vec<GamePlayer<SplitSink<WebSocket, Message>, SplitStream<WebSocket>>>,
     pub next_player: usize,
     pub rng: rand::rngs::SmallRng,
@@ -173,11 +187,12 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new<IP>(player_count: usize, players: IP) -> Self
+    pub fn new<IP>(id: uuid::Uuid, player_count: usize, players: IP) -> Self
     where
         IP: IntoIterator<Item = (String, WebSocket)>,
     {
         Game {
+            id,
             players: players
                 .into_iter()
                 .map(|(name, s)| {
@@ -193,6 +208,7 @@ impl Game {
                             Figure::InStart,
                         ],
                         done: false,
+                        rejoin_code: uuid::Uuid::new_v4(),
                     }
                 })
                 .collect(),
@@ -221,7 +237,7 @@ impl Game {
             .players
             .iter_mut()
             .enumerate()
-            .filter(|(i, p)| *i != player)
+            .filter(|(i, _)| *i != player)
         {
             for fig in player.figures.iter_mut() {
                 let pos = match fig {
@@ -237,7 +253,20 @@ impl Game {
         }
     }
 
-    pub async fn send_state(&mut self) {
+    pub async fn send_rejoin_codes(&mut self) -> Result<(), GameError> {
+        for player in self.players.iter_mut() {
+            let msg = GameResponse::RejoinCode {
+                game: self.id,
+                code: player.rejoin_code,
+            };
+
+            player.send_resp(&msg).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn send_state(&mut self) -> Result<(), GameError> {
         let state = GameResponse::State {
             players: self
                 .players
@@ -246,13 +275,10 @@ impl Game {
                 .collect(),
         };
         for player in self.players.iter_mut() {
-            match player.send_resp(&state).await {
-                Ok(_) => {}
-                Err(e) => {
-                    todo!("{:?}", e)
-                }
-            };
+            player.send_resp(&state).await?;
         }
+
+        Ok(())
     }
 
     pub fn is_done(&self) -> bool {
