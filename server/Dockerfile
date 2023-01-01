@@ -1,7 +1,7 @@
 # Based on https://kerkour.com/rust-small-docker-image
 FROM rust:1.66 AS builder
 
-WORKDIR /server
+WORKDIR /server/server
 
 # Create appuser
 ENV USER=server
@@ -20,7 +20,8 @@ RUN rustup target add x86_64-unknown-linux-musl
 RUN apt update && apt install -y musl-tools musl-dev
 RUN update-ca-certificates
 
-COPY . .
+COPY . /server/server
+COPY ../mocks/ /server/mocks
 
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
@@ -33,7 +34,7 @@ COPY --from=builder /etc/group /etc/group
 WORKDIR /server
 
 # Copy our build
-COPY --from=builder /server/target/x86_64-unknown-linux-musl/release/server ./
+COPY --from=builder /server/server/target/x86_64-unknown-linux-musl/release/server ./
 
 # Use an unprivileged user.
 USER server:server
