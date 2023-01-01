@@ -12,12 +12,18 @@ pub enum GameState {
     Done,
 }
 
-pub async fn step(
+pub async fn step<R>(
     prev: GameState,
-    game: &mut Game,
+    game: &mut Game<R>,
     rejoin_rx: &mut tokio::sync::mpsc::UnboundedReceiver<(uuid::Uuid, WebSocket)>,
-) -> Option<GameState> {
-    let current_player = game.players.get_mut(game.next_player).unwrap();
+) -> Option<GameState>
+where
+    R: Rng,
+{
+    let current_player = game
+        .players
+        .get_mut(game.next_player)
+        .expect("We always know that our index is within bounds of the Player Vec");
     tracing::debug!(
         "Player {}({}) is the currently running player",
         game.next_player,
@@ -201,8 +207,10 @@ pub async fn step(
                         GameState::MoveToNextTurn
                     }
                 }
-                GameRequest::Move { .. } => {
-                    todo!("Unexpected")
+                other => {
+                    tracing::error!("Unexpected {:?}", other);
+
+                    GameState::StartTurn
                 }
             }
         }
@@ -238,7 +246,7 @@ pub async fn step(
 
             match req {
                 GameRequest::Move { figure } => {
-                    tracing::error!("Move Figure {:?} by Rolled {:?}", figure, value);
+                    tracing::trace!("Move Figure {:?} by Rolled {:?}", figure, value);
 
                     if current_player.move_figure(figure, value).is_none() {
                         tracing::warn!("Could not move Figure");
@@ -249,8 +257,10 @@ pub async fn step(
 
                     GameState::MoveToNextTurn
                 }
-                GameRequest::Roll => {
-                    todo!("Unexpected")
+                other => {
+                    tracing::error!("Unexpected {:?}", other);
+
+                    GameState::Rolled { value }
                 }
             }
         }
@@ -269,7 +279,7 @@ pub async fn step(
             }
 
             if game.is_done() {
-                tracing::warn!("Game is Done");
+                tracing::debug!("Game is Done");
 
                 let done_msg = GameResponse::GameDone {
                     ranking: game.ranking.clone(),
