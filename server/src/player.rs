@@ -5,6 +5,7 @@ use futures::SinkExt;
 
 use crate::{Figure, GameError, GameResponse};
 
+#[derive(Debug)]
 pub struct GamePlayer<Tx, Rx> {
     pub name: String,
     pub send: Tx,

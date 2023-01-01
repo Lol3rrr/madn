@@ -1,24 +1,31 @@
+use std::fmt::Debug;
+
 use axum::extract::ws::{Message, WebSocket};
 use futures::{
     stream::{SplitSink, SplitStream},
-    StreamExt,
+    Sink, Stream,
 };
 use rand::{Rng, SeedableRng};
 
 use crate::{Figure, GameError, GamePlayer, GameResponse};
 
-pub struct Game<R> {
+pub struct Game<R, SI, ST> {
     id: uuid::Uuid,
-    pub players: Vec<GamePlayer<SplitSink<WebSocket, Message>, SplitStream<WebSocket>>>,
+    pub players: Vec<GamePlayer<SplitSink<SI, Message>, SplitStream<ST>>>,
     pub next_player: usize,
     pub rng: R,
     pub ranking: Vec<usize>,
 }
 
-impl Game<rand::rngs::SmallRng> {
+impl Game<rand::rngs::SmallRng, WebSocket, WebSocket> {
     pub fn new<IP>(id: uuid::Uuid, player_count: usize, players: IP) -> Self
     where
-        IP: IntoIterator<Item = (String, WebSocket)>,
+        IP: IntoIterator<
+            Item = (
+                String,
+                (SplitSink<WebSocket, Message>, SplitStream<WebSocket>),
+            ),
+        >,
     {
         Self::new_with_rng(
             id,
@@ -29,33 +36,33 @@ impl Game<rand::rngs::SmallRng> {
     }
 }
 
-impl<R> Game<R>
+impl<R, SI, ST> Game<R, SI, ST>
 where
     R: Rng,
+    SI: Sink<Message>,
+    <SI as futures::Sink<Message>>::Error: Debug,
+    ST: Stream<Item = Result<Message, axum::Error>>,
 {
     pub fn new_with_rng<IP>(id: uuid::Uuid, player_count: usize, players: IP, rng: R) -> Self
     where
-        IP: IntoIterator<Item = (String, WebSocket)>,
+        IP: IntoIterator<Item = (String, (SplitSink<SI, Message>, SplitStream<ST>))>,
     {
         Game {
             id,
             players: players
                 .into_iter()
-                .map(|(name, s)| {
-                    let (tx, rx) = s.split();
-                    GamePlayer {
-                        name,
-                        send: tx,
-                        recv: rx,
-                        figures: [
-                            Figure::InStart,
-                            Figure::InStart,
-                            Figure::InStart,
-                            Figure::InStart,
-                        ],
-                        done: false,
-                        rejoin_code: uuid::Uuid::new_v4(),
-                    }
+                .map(|(name, (tx, rx))| GamePlayer {
+                    name,
+                    send: tx,
+                    recv: rx,
+                    figures: [
+                        Figure::InStart,
+                        Figure::InStart,
+                        Figure::InStart,
+                        Figure::InStart,
+                    ],
+                    done: false,
+                    rejoin_code: uuid::Uuid::new_v4(),
                 })
                 .collect(),
             next_player: rand::thread_rng().gen_range(0..player_count),

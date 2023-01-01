@@ -1,8 +1,10 @@
-use axum::extract::ws::{Message, WebSocket};
-use futures::StreamExt;
+use std::fmt::Debug;
+
+use axum::extract::ws::Message;
+use futures::{Sink, Stream, StreamExt};
 use rand::Rng;
 
-use crate::{Figure, Game, GameError, GameRequest, GameResponse};
+use crate::{Figure, Game, GameError, GameRequest, GameResponse, RejoinMessage};
 
 macro_rules! recv_msg {
     ($receiver:expr, $prev_state:expr) => {
@@ -32,6 +34,7 @@ macro_rules! recv_msg {
     };
 }
 
+#[derive(Debug, PartialEq)]
 pub enum GameState {
     WaitingForReconnect { prev_state: Box<GameState> },
     StartTurn,
@@ -40,13 +43,18 @@ pub enum GameState {
     Done,
 }
 
-pub async fn step<R>(
+pub async fn step<R, SI, ST, D>(
     prev: GameState,
-    game: &mut Game<R>,
-    rejoin_rx: &mut tokio::sync::mpsc::UnboundedReceiver<(uuid::Uuid, WebSocket)>,
+    game: &mut Game<R, SI, ST>,
+    rejoin_rx: &mut tokio::sync::mpsc::UnboundedReceiver<RejoinMessage<SI, ST>>,
+    distr: &mut D,
 ) -> Option<GameState>
 where
     R: Rng,
+    SI: Sink<Message>,
+    <SI as futures::Sink<Message>>::Error: Debug,
+    ST: Stream<Item = Result<Message, axum::Error>>,
+    D: rand::distributions::Distribution<usize>,
 {
     let current_player = game
         .players
@@ -58,9 +66,11 @@ where
         current_player.name
     );
 
+    tracing::trace!("Current State {:?}", prev);
+
     let next_state = match prev {
         GameState::WaitingForReconnect { prev_state } => match rejoin_rx.recv().await {
-            Some((rejoin_key, new_socket)) => {
+            Some((rejoin_key, (tx, rx))) => {
                 let player_index_res = game.players.iter().enumerate().find_map(|(i, p)| {
                     if p.rejoin_code == rejoin_key {
                         Some(i)
@@ -76,7 +86,6 @@ where
                             .get_mut(player_index)
                             .expect("We found the index by searching the same array");
 
-                        let (tx, rx) = new_socket.split();
                         rejoined_player.send = tx;
                         rejoined_player.recv = rx;
 
@@ -127,52 +136,70 @@ where
                 GameRequest::Roll => {
                     tracing::trace!("Rolling for Player {:?}", current_player.name);
 
-                    let value: usize = game.rng.gen_range(1..=6);
+                    let value: usize = distr.sample(&mut game.rng);
 
                     tracing::trace!("Rolled {} for Player {:?}", value, current_player.name);
+
+                    let other_figures_instart = current_player
+                        .figures
+                        .iter()
+                        .any(|f| matches!(f, Figure::InStart));
 
                     let can_move = current_player.has_figures_on_field()
                         && !(value == 6 && current_player.has_figures_in_start())
                         && !current_player.figures.iter().any(|f| match f {
-                            Figure::OnField { moved } => *moved == 0,
+                            Figure::OnField { moved } => *moved == 0 && other_figures_instart,
                             _ => false,
                         });
 
                     let resp = GameResponse::Rolled { value, can_move };
                     match current_player.send_resp(&resp).await {
                         Ok(_) => {}
-                        Err(e) => {
-                            todo!("{:?}", e);
-                        }
+                        Err(e) => match e {
+                            GameError::Disconnect => {
+                                return Some(prev);
+                            }
+                            GameError::Other(reason) => {
+                                tracing::error!("Error sending Response {:?}", reason);
+                                todo!()
+                            }
+                        },
                     };
 
+                    let figure_startfield_index_res = current_player
+                        .figures
+                        .iter()
+                        .enumerate()
+                        .find(|(_, f)| match f {
+                            Figure::OnField { moved } => *moved == 0 && other_figures_instart,
+                            _ => false,
+                        });
+
+                    if let Some(findex) = figure_startfield_index_res {
+                        if current_player.move_figure(findex.0, value).is_none() {
+                            tracing::warn!("Figure could not be moved");
+                        }
+
+                        game.check_move(game.next_player);
+                        game.send_state().await.unwrap();
+
+                        if value == 6 {
+                            return Some(GameState::StartTurn);
+                        } else {
+                            return Some(GameState::MoveToNextTurn);
+                        }
+                    }
+
                     if value == 6 {
-                        if let Some(findex) =
+                        if let Some(index) =
                             current_player
                                 .figures
                                 .iter()
                                 .enumerate()
-                                .find(|(_, f)| match f {
-                                    Figure::OnField { moved } => *moved == 0,
-                                    _ => false,
+                                .find_map(|(i, f)| match f {
+                                    Figure::InStart => Some(i),
+                                    _ => None,
                                 })
-                        {
-                            if current_player.move_figure(findex.0, value).is_none() {
-                                tracing::warn!("Figure could not be moved");
-                            }
-                            game.check_move(game.next_player);
-
-                            game.send_state().await.unwrap();
-
-                            GameState::StartTurn
-                        } else if let Some(index) = current_player
-                            .figures
-                            .iter()
-                            .enumerate()
-                            .find_map(|(i, f)| match f {
-                                Figure::InStart => Some(i),
-                                _ => None,
-                            })
                         {
                             *current_player
                                 .figures
@@ -194,27 +221,7 @@ where
                             GameState::Rolled { value }
                         }
                     } else if current_player.has_figures_on_field() {
-                        if let Some(findex) =
-                            current_player
-                                .figures
-                                .iter()
-                                .enumerate()
-                                .find(|(_, f)| match f {
-                                    Figure::OnField { moved } => *moved == 0,
-                                    _ => false,
-                                })
-                        {
-                            if current_player.move_figure(findex.0, value).is_none() {
-                                tracing::warn!("Figure could not be moved");
-                            }
-                            game.check_move(game.next_player);
-
-                            game.send_state().await.unwrap();
-
-                            GameState::MoveToNextTurn
-                        } else {
-                            GameState::Rolled { value }
-                        }
+                        GameState::Rolled { value }
                     } else {
                         GameState::MoveToNextTurn
                     }
@@ -244,11 +251,17 @@ where
                     if current_player.move_figure(figure, value).is_none() {
                         tracing::warn!("Could not move Figure");
                     }
+                    let player_done = current_player.check_done();
+
                     game.check_move(game.next_player);
 
                     game.send_state().await.unwrap();
 
-                    GameState::MoveToNextTurn
+                    if value == 6 && !player_done {
+                        GameState::StartTurn
+                    } else {
+                        GameState::MoveToNextTurn
+                    }
                 }
                 other => {
                     tracing::error!("Unexpected {:?}", other);

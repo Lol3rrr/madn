@@ -9,7 +9,8 @@ use axum::{
     routing::post,
     Router,
 };
-use server::Game;
+use futures::StreamExt;
+use server::{Game, RejoinMessage};
 use std::{
     collections::HashMap,
     fmt::Debug,
@@ -29,7 +30,7 @@ struct AppState {
 #[derive(Debug)]
 struct Session {
     join: Arc<tokio::sync::mpsc::UnboundedSender<(String, WebSocket)>>,
-    rejoin: Arc<tokio::sync::mpsc::UnboundedSender<(Uuid, WebSocket)>>,
+    rejoin: Arc<tokio::sync::mpsc::UnboundedSender<RejoinMessage<WebSocket, WebSocket>>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -115,7 +116,7 @@ async fn rejoin_handler(
     let target_tx = target_session.rejoin.clone();
 
     ws.on_upgrade(move |socket| async move {
-        target_tx.send((key, socket)).expect("");
+        target_tx.send((key, socket.split())).expect("");
     })
 }
 
@@ -150,13 +151,13 @@ async fn start_session(
     id: Uuid,
     player_count: usize,
     mut n_players: tokio::sync::mpsc::UnboundedReceiver<(String, WebSocket)>,
-    mut rejoin_players: tokio::sync::mpsc::UnboundedReceiver<(Uuid, WebSocket)>,
+    mut rejoin_players: tokio::sync::mpsc::UnboundedReceiver<RejoinMessage<WebSocket, WebSocket>>,
 ) {
     tracing::debug!("Waiting for Players");
 
     let mut players = Vec::new();
     while let Some((name, ws)) = n_players.recv().await {
-        players.push((name, ws));
+        players.push((name, ws.split()));
         if players.len() == player_count {
             break;
         }
@@ -165,7 +166,6 @@ async fn start_session(
     tracing::debug!("Starting Game");
 
     let mut game = Game::new(id, player_count, players);
-
     let mut gamestate = server::statemachine::GameState::StartTurn;
 
     // Here we use unwrap because we dont really have any good way to handle any potential issues here
@@ -173,9 +173,13 @@ async fn start_session(
     game.indicate_players().await.unwrap();
     game.send_rejoin_codes().await.unwrap();
 
+    let mut distr = rand::distributions::Uniform::new_inclusive(1, 6);
+
     loop {
         gamestate =
-            match server::statemachine::step(gamestate, &mut game, &mut rejoin_players).await {
+            match server::statemachine::step(gamestate, &mut game, &mut rejoin_players, &mut distr)
+                .await
+            {
                 Some(gs) => gs,
                 None => break,
             };

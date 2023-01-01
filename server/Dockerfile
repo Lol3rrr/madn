@@ -1,3 +1,4 @@
+# Based on https://kerkour.com/rust-small-docker-image
 FROM rust:1.66 AS builder
 
 WORKDIR /server
