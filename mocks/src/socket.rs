@@ -14,7 +14,7 @@ where
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        _: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let msg = self.msgs.remove(0);
         std::task::Poll::Ready(Some(Ok(msg)))
@@ -26,27 +26,27 @@ impl<C> Sink<C> for MockSocket<C> {
 
     fn poll_close(
         self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        _: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), Self::Error>> {
         std::task::Poll::Ready(Ok(()))
     }
 
     fn poll_ready(
         self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        _: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), Self::Error>> {
         std::task::Poll::Ready(Ok(()))
     }
 
     fn poll_flush(
         self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        _: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), Self::Error>> {
         std::task::Poll::Ready(Ok(()))
     }
 
     fn start_send(self: std::pin::Pin<&mut Self>, item: C) -> Result<(), Self::Error> {
-        self.tx.send(item);
+        let _ = self.tx.send(item);
         Ok(())
     }
 }

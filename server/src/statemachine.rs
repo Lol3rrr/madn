@@ -37,7 +37,7 @@ macro_rules! recv_msg {
 #[derive(Debug, PartialEq)]
 pub enum GameState {
     WaitingForReconnect { prev_state: Box<GameState> },
-    StartTurn,
+    StartTurn { attempt: usize },
     Rolled { value: usize },
     MoveToNextTurn,
     Done,
@@ -106,7 +106,7 @@ where
                 todo!()
             }
         },
-        GameState::StartTurn => {
+        GameState::StartTurn { attempt } => {
             match current_player.send_resp(&GameResponse::Turn).await {
                 Ok(_) => {}
                 Err(e) => match e {
@@ -184,7 +184,7 @@ where
                         game.send_state().await.unwrap();
 
                         if value == 6 {
-                            return Some(GameState::StartTurn);
+                            return Some(GameState::StartTurn { attempt: 0 });
                         } else {
                             return Some(GameState::MoveToNextTurn);
                         }
@@ -216,20 +216,24 @@ where
                             game.check_move(game.next_player);
                             game.send_state().await.unwrap();
 
-                            GameState::StartTurn
+                            GameState::StartTurn { attempt: 0 }
                         } else {
                             GameState::Rolled { value }
                         }
                     } else if current_player.has_figures_on_field() {
                         GameState::Rolled { value }
-                    } else {
+                    } else if attempt >= 2 {
                         GameState::MoveToNextTurn
+                    } else {
+                        GameState::StartTurn {
+                            attempt: attempt + 1,
+                        }
                     }
                 }
                 other => {
                     tracing::error!("Unexpected {:?}", other);
 
-                    GameState::StartTurn
+                    GameState::StartTurn { attempt }
                 }
             }
         }
@@ -258,7 +262,7 @@ where
                     game.send_state().await.unwrap();
 
                     if value == 6 && !player_done {
-                        GameState::StartTurn
+                        GameState::StartTurn { attempt: 0 }
                     } else {
                         GameState::MoveToNextTurn
                     }
@@ -304,7 +308,7 @@ where
                     }
                 }
 
-                GameState::StartTurn
+                GameState::StartTurn { attempt: 0 }
             }
         }
         GameState::Done => {

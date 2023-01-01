@@ -65,6 +65,7 @@
     animation-duration: 0.50s;
     animation-play-state: paused;
     animation-iteration-count: 1;
+    animation-fill-mode: forwards;
 }
 
 .move-right {
