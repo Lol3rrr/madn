@@ -53,6 +53,7 @@ where
                         rejoined_player.recv = rx;
 
                         game.send_state().await;
+                        game.indicate_players().await;
 
                         *prev_state
                     }

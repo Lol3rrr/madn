@@ -127,6 +127,29 @@ where
         Ok(())
     }
 
+    pub async fn indicate_players(&mut self) -> Result<(), GameError> {
+        let indications: Vec<_> = self
+            .players
+            .iter()
+            .enumerate()
+            .map(|(i, player)| (i, player.name.clone()))
+            .collect();
+
+        for (index, player) in self.players.iter_mut().enumerate() {
+            for (indic_index, indic_name) in indications.iter() {
+                let resp = GameResponse::IndicatePlayer {
+                    player: *indic_index,
+                    name: indic_name.clone(),
+                    you: *indic_index == index,
+                };
+
+                player.send_resp(&resp).await?;
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn is_done(&self) -> bool {
         self.players.iter().all(|p| p.done)
     }

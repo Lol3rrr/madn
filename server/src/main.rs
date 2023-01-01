@@ -167,24 +167,7 @@ async fn start_session(
 
     let mut gamestate = server::statemachine::GameState::StartTurn;
 
-    let player_indicators: Vec<_> = game
-        .players
-        .iter()
-        .enumerate()
-        .map(|(i, p)| (i, p.name.clone()))
-        .collect();
-    for (index, player) in game.players.iter_mut().enumerate() {
-        for (name_index, name) in player_indicators.iter() {
-            player
-                .send_resp(&GameResponse::IndicatePlayer {
-                    player: *name_index,
-                    name: name.clone(),
-                    you: index == *name_index,
-                })
-                .await
-                .unwrap();
-        }
-    }
+    game.indicate_players().await.unwrap();
 
     game.send_rejoin_codes().await.unwrap();
 
