@@ -80,7 +80,7 @@
                 transform: translateX(0px);
             }
 
-            to {
+            100% {
                 transform: translateX(36px);
             }
         }
@@ -90,7 +90,7 @@
                 transform: translateX(0px);
             }
 
-            to {
+            100% {
                 transform: translateX(-36px);
             }
         }
@@ -100,7 +100,7 @@
                 transform: translateY(0px);
             }
 
-            to {
+            100% {
                 transform: translateY(-36px);
             }
         }
@@ -110,7 +110,7 @@
                 transform: translateY(0px);
             }
 
-            to {
+            100% {
                 transform: translateY(36px);
             }
         }
@@ -125,9 +125,9 @@
             border-style: solid;
             border-color: black;
 
-            animation-duration: 0.5s;
+            animation-duration: 0.50s;
             animation-play-state: paused;
-            animation-iteration-count: infinite;
+            animation-iteration-count: 1;
         }
 
         .move-right {
@@ -354,7 +354,6 @@
                         if (current_slot != -1) {
                             const int_id = setInterval(() => {
                                 let next_slot = (current_slot + 1) % slots.length;
-                                console.log("From Slot: " + current_slot + " To: " + next_slot);
 
                                 let src_pos = slots[current_slot];
                                 let next_pos = slots[next_slot];
@@ -382,6 +381,10 @@
                                     player_elements[pi][fi].classList.remove("move-up");
                                     player_elements[pi][fi].classList.remove("move-down");
                                 }
+
+                                player_elements[pi][fi].style.animation = 'none';
+                                player_elements[pi][fi].offsetHeight; /* trigger reflow */
+                                player_elements[pi][fi].style.animation = null;
 
                                 current_slot = (current_slot + 1) % slots.length;
                                 step_count++;
