@@ -31,7 +31,7 @@ where
     pub fn has_figures_on_field(&self) -> bool {
         self.figures
             .iter()
-            .any(|f| matches!(f, Figure::OnField { .. }))
+            .any(|f| matches!(f, Figure::OnField { .. } | Figure::InHouse { .. }))
     }
 
     pub fn is_done(&self) -> bool {
