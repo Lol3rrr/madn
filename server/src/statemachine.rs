@@ -4,6 +4,34 @@ use rand::Rng;
 
 use crate::{Figure, Game, GameError, GameRequest, GameResponse};
 
+macro_rules! recv_msg {
+    ($receiver:expr, $prev_state:expr) => {
+        match $receiver.next().await {
+            Some(Ok(msg)) => match msg {
+                Message::Text(t) => t,
+                Message::Close(_) => {
+                    tracing::warn!("Player Disconnected");
+                    return Some(GameState::WaitingForReconnect {
+                        prev_state: $prev_state,
+                    });
+                }
+                other => {
+                    todo!("{:?}", other)
+                }
+            },
+            Some(Err(e)) => {
+                tracing::error!("Error receiving {:?}", e);
+                return Some(GameState::WaitingForReconnect {
+                    prev_state: $prev_state,
+                });
+            }
+            None => {
+                todo!()
+            }
+        }
+    };
+}
+
 pub enum GameState {
     WaitingForReconnect { prev_state: Box<GameState> },
     StartTurn,
@@ -52,8 +80,10 @@ where
                         rejoined_player.send = tx;
                         rejoined_player.recv = rx;
 
-                        game.send_state().await;
-                        game.indicate_players().await;
+                        // We ignore these results because if any of the connections fail again, we will just re-enter this
+                        // state again later on
+                        let _ = game.send_state().await;
+                        let _ = game.indicate_players().await;
 
                         *prev_state
                     }
@@ -83,26 +113,7 @@ where
                 },
             };
 
-            let msg_text = match current_player.recv.next().await {
-                Some(Ok(msg)) => match msg {
-                    Message::Text(t) => t,
-                    Message::Close(_) => {
-                        tracing::warn!("Player Disconnected");
-                        return Some(GameState::WaitingForReconnect {
-                            prev_state: Box::new(prev),
-                        });
-                    }
-                    other => {
-                        todo!("{:?}", other)
-                    }
-                },
-                Some(Err(e)) => {
-                    todo!("{:?}", e)
-                }
-                None => {
-                    todo!()
-                }
-            };
+            let msg_text = recv_msg!(current_player.recv, Box::new(prev));
 
             let req: GameRequest = match serde_json::from_str(&msg_text) {
                 Ok(r) => r,
@@ -216,26 +227,7 @@ where
             }
         }
         GameState::Rolled { value } => {
-            let msg_text = match current_player.recv.next().await {
-                Some(Ok(msg)) => match msg {
-                    Message::Text(t) => t,
-                    Message::Close(_) => {
-                        tracing::warn!("Player disconenct");
-                        return Some(GameState::WaitingForReconnect {
-                            prev_state: Box::new(GameState::Rolled { value }),
-                        });
-                    }
-                    other => {
-                        todo!("{:?}", other)
-                    }
-                },
-                Some(Err(e)) => {
-                    todo!("{:?}", e)
-                }
-                None => {
-                    todo!()
-                }
-            };
+            let msg_text = recv_msg!(current_player.recv, Box::new(GameState::Rolled { value }));
 
             let req: GameRequest = match serde_json::from_str(&msg_text) {
                 Ok(r) => r,

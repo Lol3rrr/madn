@@ -3,12 +3,13 @@ use axum::{
         ws::{WebSocket, WebSocketUpgrade},
         Json, Path, State,
     },
+    http::header,
     response::{Html, IntoResponse},
     routing::get,
     routing::post,
     Router,
 };
-use server::{Game, GameResponse};
+use server::Game;
 use std::{
     collections::HashMap,
     fmt::Debug,
@@ -52,6 +53,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(index))
+        .route("/style.css", get(style))
         .route("/create", post(create))
         .route("/join/:session/:name", get(join_handler))
         .route("/rejoin/:game/:key", get(rejoin_handler))
@@ -163,12 +165,12 @@ async fn start_session(
     tracing::debug!("Starting Game");
 
     let mut game = Game::new(id, player_count, players);
-    game.send_state().await.unwrap();
 
     let mut gamestate = server::statemachine::GameState::StartTurn;
 
+    // Here we use unwrap because we dont really have any good way to handle any potential issues here
+    game.send_state().await.unwrap();
     game.indicate_players().await.unwrap();
-
     game.send_rejoin_codes().await.unwrap();
 
     loop {
@@ -184,5 +186,12 @@ async fn start_session(
 
 // Include utf-8 file at **compile** time.
 async fn index() -> Html<&'static str> {
-    Html(std::include_str!("../chat.html"))
+    Html(std::include_str!("../assets/index.html"))
+}
+
+async fn style() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/css")],
+        include_str!("../assets/style.css"),
+    )
 }

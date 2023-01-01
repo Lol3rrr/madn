@@ -1,0 +1,112 @@
+.field {
+    display: grid;
+    grid-template-columns: repeat(11, 35px);
+    grid-template-rows: repeat(11, 35px);
+}
+
+.entry {
+    width: 30px;
+    height: 30px;
+    border-radius: 17px;
+    border-width: 2px;
+    border-style: solid;
+}
+
+@keyframes moveright {
+    from {
+        transform: translateX(0px);
+    }
+
+    100% {
+        transform: translateX(36px);
+    }
+}
+
+@keyframes moveleft {
+    from {
+        transform: translateX(0px);
+    }
+
+    100% {
+        transform: translateX(-36px);
+    }
+}
+
+@keyframes moveup {
+    from {
+        transform: translateY(0px);
+    }
+
+    100% {
+        transform: translateY(-36px);
+    }
+}
+
+@keyframes movedown {
+    from {
+        transform: translateY(0px);
+    }
+
+    100% {
+        transform: translateY(36px);
+    }
+}
+
+.figure {
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    margin-left: 9px;
+    margin-top: 9px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: black;
+
+    animation-duration: 0.50s;
+    animation-play-state: paused;
+    animation-iteration-count: 1;
+}
+
+.move-right {
+    animation-name: moveright;
+    animation-play-state: running;
+}
+
+.move-left {
+    animation-name: moveleft;
+    animation-play-state: running;
+}
+
+.move-up {
+    animation-name: moveup;
+    animation-play-state: running;
+}
+
+.move-down {
+    animation-name: movedown;
+    animation-play-state: running;
+}
+
+.normalslot {
+    border-color: black;
+}
+
+.start1,
+.player1 {
+    background-color: yellow;
+}
+
+.start2,
+.player2 {
+    background-color: green;
+}
+
+.start3,
+.player3 {
+    background-color: red;
+}
+
+.start4,
+.player4 {
+    background-color: black;
+}
