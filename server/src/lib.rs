@@ -16,16 +16,26 @@ pub use player::GamePlayer;
 
 pub type RejoinMessage<SI, ST> = (uuid::Uuid, (SplitSink<SI, Message>, SplitStream<ST>));
 
+/// The Errors that could be returned while running a Game
 #[derive(Debug, PartialEq)]
 pub enum GameError {
+    /// A Player disconnected
     Disconnect,
+    /// Other Errors occured
     Other(&'static str),
 }
 
+/// A Figure of a Player
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Figure {
+    /// The Figure is still on the Start Field
     InStart,
-    OnField { moved: usize },
+    /// The Figure is already on the Field
+    OnField {
+        /// The Number of Fields that the Figure has already moved from it's starting position
+        moved: usize,
+    },
+    /// The Figure is already in the House
     InHouse { pos: usize },
 }
 

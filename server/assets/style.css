@@ -1,7 +1,14 @@
+.hidden {
+    display: none;
+}
+
 .field {
+    --size: 36px;
+
+    margin-top: 60px;
     display: grid;
-    grid-template-columns: repeat(11, 35px);
-    grid-template-rows: repeat(11, 35px);
+    grid-template-columns: repeat(11, var(--size));
+    grid-template-rows: repeat(11, var(--size));
 }
 
 .entry {
@@ -10,6 +17,34 @@
     border-radius: 17px;
     border-width: 2px;
     border-style: solid;
+
+    margin-left: calc((var(--size) - 32px) / 2);
+    margin-top: calc((var(--size) - 32px) / 2);
+}
+
+.house {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+
+    margin-left: calc((var(--size) - 18px) / 2);
+    margin-top: calc((var(--size) - 18px) / 2);
+}
+
+.house1 {
+    background-color: rgb(230, 230, 0);
+}
+
+.house2 {
+    background-color: green;
+}
+
+.house3 {
+    background-color: red;
+}
+
+.house4 {
+    background-color: black;
 }
 
 @keyframes moveright {
@@ -18,7 +53,7 @@
     }
 
     100% {
-        transform: translateX(36px);
+        transform: translateX(var(--size));
     }
 }
 
@@ -28,7 +63,7 @@
     }
 
     100% {
-        transform: translateX(-36px);
+        transform: translateX(calc(var(--size) * -1));
     }
 }
 
@@ -38,7 +73,7 @@
     }
 
     100% {
-        transform: translateY(-36px);
+        transform: translateY(calc(var(--size) * -1));
     }
 }
 
@@ -48,7 +83,7 @@
     }
 
     100% {
-        transform: translateY(36px);
+        transform: translateY(var(--size));
     }
 }
 
@@ -56,8 +91,8 @@
     width: 16px;
     height: 16px;
     border-radius: 8px;
-    margin-left: 9px;
-    margin-top: 9px;
+    margin-left: calc((var(--size) - 14px) / 2);
+    margin-top: calc((var(--size) - 14px) / 2);
     border-width: 2px;
     border-style: solid;
     border-color: black;

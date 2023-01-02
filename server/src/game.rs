@@ -40,6 +40,7 @@ where
     <SI as futures::Sink<Message>>::Error: Debug,
     ST: Stream<Item = Result<Message, axum::Error>>,
 {
+    /// Create a new Game instance with the given ID, players and rng
     pub fn new_with_rng<IP>(id: uuid::Uuid, players: IP, rng: R) -> Self
     where
         IP: IntoIterator<Item = (String, (SplitSink<SI, Message>, SplitStream<ST>))>,
@@ -72,6 +73,7 @@ where
         }
     }
 
+    /// Checks if the game or players is done
     pub fn check_move(&mut self, player: usize) {
         let player_figures: Vec<_> = self
             .players
@@ -107,6 +109,7 @@ where
         }
     }
 
+    /// Sends all the Rejoin-Codes for the Players to them
     pub async fn send_rejoin_codes(&mut self) -> Result<(), GameError> {
         for player in self.players.iter_mut() {
             let msg = GameResponse::RejoinCode {
@@ -120,6 +123,7 @@ where
         Ok(())
     }
 
+    /// Sends the new State to the Players of the Game
     pub async fn send_state(&mut self) -> Result<(), GameError> {
         let state = GameResponse::State {
             players: self
@@ -135,6 +139,7 @@ where
         Ok(())
     }
 
+    /// Indicate the Players
     pub async fn indicate_players(&mut self) -> Result<(), GameError> {
         let indications: Vec<_> = self
             .players
@@ -158,6 +163,7 @@ where
         Ok(())
     }
 
+    /// Check if the Game is done
     pub fn is_done(&self) -> bool {
         self.players.iter().all(|p| p.done)
     }

@@ -5,6 +5,7 @@ use futures::SinkExt;
 
 use crate::{Figure, GameError, GameResponse};
 
+/// A Player instance in a running Game
 #[derive(Debug)]
 pub struct GamePlayer<Tx, Rx> {
     pub name: String,
@@ -20,24 +21,31 @@ where
     Tx: futures::Sink<Message> + Unpin,
     <Tx as futures::Sink<Message>>::Error: Debug,
 {
+    /// Check if a Figure of the Player is still in the Start
     pub fn has_figures_in_start(&self) -> bool {
         self.figures.iter().any(|f| matches!(f, Figure::InStart))
     }
+
+    /// Check if a Figure is still available to move
     pub fn has_figures_left(&self) -> bool {
         self.figures
             .iter()
             .any(|f| !matches!(f, Figure::InHouse { .. }))
     }
+
+    /// Check if any Figure is left on the Field
     pub fn has_figures_on_field(&self) -> bool {
         self.figures
             .iter()
             .any(|f| matches!(f, Figure::OnField { .. } | Figure::InHouse { .. }))
     }
 
+    /// Returns if the Figure is done
     pub fn is_done(&self) -> bool {
         self.done
     }
 
+    /// Try to send a given Response to the Player
     pub async fn send_resp(&mut self, resp: &GameResponse) -> Result<(), GameError> {
         let content = serde_json::to_string(resp)
             .expect("Serializing a Response to send should always work as the Fromat is known");
@@ -50,6 +58,11 @@ where
         }
     }
 
+    /// Tries to move a given Figure by the specified amount.
+    ///
+    /// # Returns
+    /// * `Some` the new Position for the Figure
+    /// * `None` if the Figure could not be moved to the attempted position
     #[must_use]
     pub fn move_figure(&mut self, index: usize, amount: usize) -> Option<&Figure> {
         let figure = self.figures.get_mut(index)?;

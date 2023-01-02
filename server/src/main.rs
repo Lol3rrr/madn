@@ -189,13 +189,19 @@ async fn start_session(
 }
 
 // Include utf-8 file at **compile** time.
-async fn index() -> Html<&'static str> {
-    Html(std::include_str!("../assets/index.html"))
+async fn index() -> impl IntoResponse {
+    #[cfg(not(debug_assertions))]
+    return Html(std::include_str!("../assets/index.html"));
+
+    #[cfg(debug_assertions)]
+    return Html(std::fs::read_to_string("assets/index.html").unwrap());
 }
 
 async fn style() -> impl IntoResponse {
-    (
-        [(header::CONTENT_TYPE, "text/css")],
-        include_str!("../assets/style.css"),
-    )
+    #[cfg(not(debug_assertions))]
+    let content = include_str!("../assets/style.css");
+    #[cfg(debug_assertions)]
+    let content = std::fs::read_to_string("assets/style.css").unwrap();
+
+    ([(header::CONTENT_TYPE, "text/css")], content)
 }

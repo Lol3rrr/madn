@@ -12,7 +12,8 @@
 <body>
     <h1>Mensch Ärger Dich Nicht</h1>
 
-    <button id="rejoin" type="button">Rejoin</button>
+    <button id="rejoin" type="button" disabled="true">Rejoin</button>
+    <button id="rejoin-clear" type="button" disabled="true">Rejoin Clear</button>
 
     <div id="create-game-div">
         <input id="playercount" style="display:block; width:100px; box-sizing: border-box" type="text"
@@ -20,7 +21,7 @@
         <button id="create" type="button">Create Game</button>
     </div>
 
-    <div id="join-game-div">
+    <div id="join-game-div" class="hidden">
         <input id="gameid" style="display:block; width:100px; box-sizing: border-box" type="hidden"
             placeholder="gameid">
         <input id="username" style="display:block; width:100px; box-sizing: border-box" type="text"
@@ -33,32 +34,52 @@
 
     <button id="roll" type="button" disabled="true">Roll</button>
 
-    <div class="field"></div>
+    <div class="field">
+        <span style="grid-column-start: 1; grid-row-start: 1; transform: translateY(-30px);" id="player1_name"></span>
+        <span style="grid-column-start: 11; grid-row-start: 1; transform: translateY(-30px);" id="player2_name"></span>
+        <span style="grid-column-start: 11; grid-row-start: 11; transform: translateY(30px);" id="player3_name"></span>
+        <span style="grid-column-start: 1; grid-row-start: 11; transform: translateY(30px);" id="player4_name"></span>
+
+        <div style="grid-column-start: 2; grid-row-start: 6;" class="house house1"></div>
+        <div style="grid-column-start: 3; grid-row-start: 6;" class="house house1"></div>
+        <div style="grid-column-start: 4; grid-row-start: 6;" class="house house1"></div>
+        <div style="grid-column-start: 5; grid-row-start: 6;" class="house house1"></div>
+
+        <div style="grid-column-start: 6; grid-row-start: 2;" class="house house2"></div>
+        <div style="grid-column-start: 6; grid-row-start: 3;" class="house house2"></div>
+        <div style="grid-column-start: 6; grid-row-start: 4;" class="house house2"></div>
+        <div style="grid-column-start: 6; grid-row-start: 5;" class="house house2"></div>
+
+        <div style="grid-column-start: 10; grid-row-start: 6;" class="house house3"></div>
+        <div style="grid-column-start: 9; grid-row-start: 6;" class="house house3"></div>
+        <div style="grid-column-start: 8; grid-row-start: 6;" class="house house3"></div>
+        <div style="grid-column-start: 7; grid-row-start: 6;" class="house house3"></div>
+
+        <div style="grid-column-start: 6; grid-row-start: 10;" class="house house4"></div>
+        <div style="grid-column-start: 6; grid-row-start: 9;" class="house house4"></div>
+        <div style="grid-column-start: 6; grid-row-start: 8;" class="house house4"></div>
+        <div style="grid-column-start: 6; grid-row-start: 7;" class="house house4"></div>
+    </div>
 
     <table>
         <tr>
             <th>Color</th>
-            <th>Player</th>
             <th>You?</th>
         </tr>
         <tr>
             <th>Yellow</th>
-            <th id="player1_name"></th>
             <th id="player1_you">False</th>
         </tr>
         <tr>
             <th>Green</th>
-            <th id="player2_name"></th>
             <th id="player2_you">False</th>
         </tr>
         <tr>
             <th>Red</th>
-            <th id="player3_name"></th>
             <th id="player3_you">False</th>
         </tr>
         <tr>
             <th>Black</th>
-            <th id="player4_name"></th>
             <th id="player4_you">False</th>
         </tr>
     </table>
@@ -238,6 +259,7 @@
                                 break;
                             }
                         }
+
                         console.log([column_found, row_found] + " - " + slots + " => " + current_slot);
                         if (current_slot != -1) {
                             const int_id = setInterval(() => {
@@ -298,6 +320,9 @@
         }
         positionFigures();
 
+        const join_div = document.querySelector("#join-game-div");
+        const create_div = document.querySelector("#create-game-div");
+
         const playercount = document.querySelector("#playercount");
         const gameid = document.querySelector("#gameid");
         const username = document.querySelector("#username");
@@ -314,6 +339,9 @@
             window.history.replaceState({}, document.title, "/");
 
             gameid.value = join_id;
+
+            join_div.classList.remove('hidden');
+            create_div.classList.add('hidden');
         }
 
         const create_btn = document.querySelector("#create");
@@ -333,6 +361,9 @@
             }).then(function (data) {
                 gameid.value = data;
                 joinurl.textContent = window.location.href + "?join=" + data;
+
+                join_div.classList.remove('hidden');
+                create_div.classList.add('hidden');
             }).catch(function (err) {
                 console.log('Fetch Error :-S', err);
             });
@@ -438,7 +469,10 @@
         join_btn.addEventListener("click", function (e) {
             this.disabled = true;
 
-            joingame(gameid.value, username.value)
+            joingame(gameid.value, username.value);
+
+            join_div.classList.add('hidden');
+            create_div.classList.add('hidden');
         });
 
         roll.addEventListener("click", function (e) {
@@ -447,6 +481,7 @@
             this.disabled = true;
         });
 
+        const rejoin_clear_btn = document.querySelector("#rejoin-clear");
         if (window.localStorage.getItem('rejoin') != undefined) {
             rejoin_btn.addEventListener("click", function (e) {
                 const key = window.localStorage.getItem('rejoin');
@@ -454,6 +489,16 @@
 
                 rejoin(game, key);
             });
+            rejoin_btn.disabled = false;
+
+            rejoin_clear_btn.addEventListener("click", function (e) {
+                window.localStorage.removeItem('rejoin');
+                window.localStorage.removeItem('game');
+
+                rejoin_btn.disabled = true;
+                rejoin_clear_btn.disabled = true;
+            });
+            rejoin_clear_btn.disabled = false;
         }
     </script>
 </body>
