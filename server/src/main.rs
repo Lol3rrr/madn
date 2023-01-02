@@ -165,7 +165,7 @@ async fn start_session(
 
     tracing::debug!("Starting Game");
 
-    let mut game = Game::new(id, player_count, players);
+    let mut game = Game::new(id, players);
     let mut gamestate = server::statemachine::GameState::StartTurn { attempt: 0 };
 
     // Here we use unwrap because we dont really have any good way to handle any potential issues here

@@ -1,5 +1,6 @@
 use futures::{Sink, Stream};
 
+/// Create a Test Socket/Stream + Sink
 #[derive(Debug)]
 pub struct MockSocket<C> {
     msgs: Vec<C>,
@@ -52,6 +53,7 @@ impl<C> Sink<C> for MockSocket<C> {
 }
 
 impl<C> MockSocket<C> {
+    /// Create a new Test Socket
     pub fn new(tx: tokio::sync::mpsc::UnboundedSender<C>, msgs: Vec<C>) -> Self {
         Self { tx, msgs }
     }

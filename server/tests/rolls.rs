@@ -15,7 +15,6 @@ async fn roll6_with_multiple_instart() {
 
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
-        1,
         vec![
             (
                 "test".to_string(),
@@ -63,7 +62,6 @@ async fn roll6_with_one_instart() {
 
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
-        1,
         vec![
             (
                 "test".to_string(),
@@ -115,7 +113,6 @@ async fn roll6_with_only_field() {
 
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
-        1,
         vec![
             (
                 "test".to_string(),
@@ -171,7 +168,6 @@ async fn use3_attempts_no_onfield() {
 
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
-        1,
         vec![
             (
                 "test".to_string(),

@@ -39,11 +39,12 @@ where
     }
 
     pub async fn send_resp(&mut self, resp: &GameResponse) -> Result<(), GameError> {
-        let content = serde_json::to_string(resp).unwrap();
+        let content = serde_json::to_string(resp)
+            .expect("Serializing a Response to send should always work as the Fromat is known");
         match self.send.send(Message::Text(content)).await {
             Ok(_) => Ok(()),
             Err(e) => {
-                tracing::error!("{:?}", e);
+                tracing::error!("Error sending Response: {:?}", e);
                 Err(GameError::Disconnect)
             }
         }

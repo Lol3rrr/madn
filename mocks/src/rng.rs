@@ -1,3 +1,4 @@
+/// A Test RNG implementation, which returns predefined Values
 pub struct MockRand {
     results: Vec<u64>,
 }
@@ -19,6 +20,7 @@ impl rand::RngCore for MockRand {
 }
 
 impl MockRand {
+    /// Creates a new Instance
     pub fn new(results: Vec<u64>) -> Self {
         Self { results }
     }
