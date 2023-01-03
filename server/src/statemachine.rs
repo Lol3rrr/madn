@@ -220,7 +220,7 @@ where
                         } else {
                             GameState::Rolled { value }
                         }
-                    } else if current_player.has_figures_on_field() {
+                    } else if current_player.has_moveable_figure() {
                         GameState::Rolled { value }
                     } else if attempt >= 2 {
                         GameState::MoveToNextTurn

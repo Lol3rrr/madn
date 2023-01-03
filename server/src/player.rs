@@ -16,6 +16,24 @@ pub struct GamePlayer<Tx, Rx> {
     pub(crate) rejoin_code: uuid::Uuid,
 }
 
+impl<Tx, Rx> GamePlayer<Tx, Rx> {
+    pub fn has_moveable_figure(&self) -> bool {
+        let figures_in_house: usize = self
+            .figures
+            .iter()
+            .filter(|f| matches!(f, Figure::InHouse { .. }))
+            .count();
+
+        self.figures
+            .iter()
+            .any(|f| matches!(f, Figure::OnField { .. }))
+            || self.figures.iter().any(|f| match f {
+                Figure::InHouse { pos } => *pos < 4 - figures_in_house,
+                _ => false,
+            })
+    }
+}
+
 impl<Tx, Rx> GamePlayer<Tx, Rx>
 where
     Tx: futures::Sink<Message> + Unpin,
@@ -137,5 +155,84 @@ where
 
         self.done = true;
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn has_moveable() {
+        {
+            let player = GamePlayer {
+                name: "test".to_string(),
+                figures: [
+                    Figure::InStart,
+                    Figure::InStart,
+                    Figure::InStart,
+                    Figure::InStart,
+                ],
+                send: (),
+                recv: (),
+                rejoin_code: uuid::Uuid::new_v4(),
+                done: false,
+            };
+
+            assert!(!player.has_moveable_figure());
+        }
+
+        {
+            let player = GamePlayer {
+                name: "test".to_string(),
+                figures: [
+                    Figure::OnField { moved: 0 },
+                    Figure::InStart,
+                    Figure::InStart,
+                    Figure::InStart,
+                ],
+                send: (),
+                recv: (),
+                rejoin_code: uuid::Uuid::new_v4(),
+                done: false,
+            };
+
+            assert!(player.has_moveable_figure());
+        }
+
+        {
+            let player = GamePlayer {
+                name: "test".to_string(),
+                figures: [
+                    Figure::InHouse { pos: 3 },
+                    Figure::InStart,
+                    Figure::InStart,
+                    Figure::InStart,
+                ],
+                send: (),
+                recv: (),
+                rejoin_code: uuid::Uuid::new_v4(),
+                done: false,
+            };
+
+            assert!(!player.has_moveable_figure());
+        }
+        {
+            let player = GamePlayer {
+                name: "test".to_string(),
+                figures: [
+                    Figure::InHouse { pos: 2 },
+                    Figure::InStart,
+                    Figure::InStart,
+                    Figure::InStart,
+                ],
+                send: (),
+                recv: (),
+                rejoin_code: uuid::Uuid::new_v4(),
+                done: false,
+            };
+
+            assert!(player.has_moveable_figure());
+        }
     }
 }
