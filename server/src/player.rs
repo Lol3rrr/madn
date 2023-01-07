@@ -17,6 +17,22 @@ pub struct GamePlayer<Tx, Rx> {
 }
 
 impl<Tx, Rx> GamePlayer<Tx, Rx> {
+    pub fn new(name: String, (send, recv): (Tx, Rx)) -> Self {
+        Self {
+            name,
+            send,
+            recv,
+            figures: [
+                Figure::InStart,
+                Figure::InStart,
+                Figure::InStart,
+                Figure::InStart,
+            ],
+            rejoin_code: uuid::Uuid::new_v4(),
+            done: false,
+        }
+    }
+
     pub fn has_moveable_figure(&self) -> bool {
         let figures_in_house: usize = self
             .figures

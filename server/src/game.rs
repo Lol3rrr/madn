@@ -22,12 +22,7 @@ impl Game<rand::rngs::SmallRng, WebSocket, WebSocket> {
     /// Creates a new Game instance with the given ID, playercount and players
     pub fn new<IP>(id: uuid::Uuid, players: IP) -> Self
     where
-        IP: IntoIterator<
-            Item = (
-                String,
-                (SplitSink<WebSocket, Message>, SplitStream<WebSocket>),
-            ),
-        >,
+        IP: IntoIterator<Item = GamePlayer<SplitSink<WebSocket, Message>, SplitStream<WebSocket>>>,
     {
         Self::new_with_rng(id, players, rand::rngs::SmallRng::from_entropy())
     }
@@ -43,24 +38,9 @@ where
     /// Create a new Game instance with the given ID, players and rng
     pub fn new_with_rng<IP>(id: uuid::Uuid, players: IP, rng: R) -> Self
     where
-        IP: IntoIterator<Item = (String, (SplitSink<SI, Message>, SplitStream<ST>))>,
+        IP: IntoIterator<Item = GamePlayer<SplitSink<SI, Message>, SplitStream<ST>>>,
     {
-        let player_vec: Vec<_> = players
-            .into_iter()
-            .map(|(name, (tx, rx))| GamePlayer {
-                name,
-                send: tx,
-                recv: rx,
-                figures: [
-                    Figure::InStart,
-                    Figure::InStart,
-                    Figure::InStart,
-                    Figure::InStart,
-                ],
-                done: false,
-                rejoin_code: uuid::Uuid::new_v4(),
-            })
-            .collect();
+        let player_vec: Vec<_> = players.into_iter().collect();
 
         let player_count = player_vec.len();
 

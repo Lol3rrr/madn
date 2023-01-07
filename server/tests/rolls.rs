@@ -2,7 +2,7 @@ use std::vec;
 
 use axum::extract::ws::Message;
 use futures::StreamExt;
-use server::{statemachine::GameState, Figure, Game, GameRequest};
+use server::{statemachine::GameState, Figure, Game, GamePlayer, GameRequest};
 
 use mocks::{DumbDistr, MockRand, MockSocket};
 use tracing_test::traced_test;
@@ -16,7 +16,7 @@ async fn roll6_with_multiple_instart() {
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
         vec![
-            (
+            GamePlayer::new(
                 "test".to_string(),
                 MockSocket::new(
                     tx1,
@@ -27,7 +27,7 @@ async fn roll6_with_multiple_instart() {
                 )
                 .split(),
             ),
-            ("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
+            GamePlayer::new("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
         ],
         MockRand::new(vec![5, 3]),
     );
@@ -65,7 +65,7 @@ async fn roll6_with_one_instart() {
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
         vec![
-            (
+            GamePlayer::new(
                 "test".to_string(),
                 MockSocket::new(
                     tx1,
@@ -76,7 +76,7 @@ async fn roll6_with_one_instart() {
                 )
                 .split(),
             ),
-            ("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
+            GamePlayer::new("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
         ],
         MockRand::new(vec![5, 3]),
     );
@@ -118,7 +118,7 @@ async fn roll6_with_only_field() {
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
         vec![
-            (
+            GamePlayer::new(
                 "test".to_string(),
                 MockSocket::new(
                     tx1,
@@ -132,7 +132,7 @@ async fn roll6_with_only_field() {
                 )
                 .split(),
             ),
-            ("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
+            GamePlayer::new("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
         ],
         MockRand::new(vec![5, 3]),
     );
@@ -175,7 +175,7 @@ async fn use3_attempts_no_onfield() {
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
         vec![
-            (
+            GamePlayer::new(
                 "test".to_string(),
                 MockSocket::new(
                     tx1,
@@ -188,7 +188,7 @@ async fn use3_attempts_no_onfield() {
                 )
                 .split(),
             ),
-            ("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
+            GamePlayer::new("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
         ],
         MockRand::new(vec![0, 2, 3, 0]),
     );
@@ -234,7 +234,7 @@ async fn use3_attempts_already_done_inhouse() {
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
         vec![
-            (
+            GamePlayer::new(
                 "test".to_string(),
                 MockSocket::new(
                     tx1,
@@ -247,7 +247,7 @@ async fn use3_attempts_already_done_inhouse() {
                 )
                 .split(),
             ),
-            ("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
+            GamePlayer::new("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
         ],
         MockRand::new(vec![0, 2, 3, 0]),
     );
@@ -294,7 +294,7 @@ async fn use3_attempts_not_done_inhouse() {
     let mut game: Game<_, MockSocket<Message>, MockSocket<Message>> = Game::new_with_rng(
         uuid::Uuid::new_v4(),
         vec![
-            (
+            GamePlayer::new(
                 "test".to_string(),
                 MockSocket::new(
                     tx1,
@@ -307,7 +307,7 @@ async fn use3_attempts_not_done_inhouse() {
                 )
                 .split(),
             ),
-            ("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
+            GamePlayer::new("test2".to_string(), MockSocket::new(tx2, vec![]).split()),
         ],
         MockRand::new(vec![0, 2, 3, 0]),
     );

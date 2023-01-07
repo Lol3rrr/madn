@@ -10,7 +10,7 @@ use axum::{
     Router,
 };
 use futures::StreamExt;
-use server::{Game, RejoinMessage};
+use server::{Game, GamePlayer, GameResponse, RejoinMessage};
 use std::{
     collections::HashMap,
     fmt::Debug,
@@ -157,9 +157,27 @@ async fn start_session(
 
     let mut players = Vec::new();
     while let Some((name, ws)) = n_players.recv().await {
-        players.push((name, ws.split()));
+        players.push(GamePlayer::new(name, ws.split()));
         if players.len() == player_count {
             break;
+        }
+
+        let all_players: Vec<_> = players
+            .iter()
+            .enumerate()
+            .map(|(i, p)| (i, p.name.clone()))
+            .collect();
+        for (index, player) in players.iter_mut().enumerate() {
+            for ind_player in all_players.iter() {
+                let resp = GameResponse::IndicatePlayer {
+                    player: ind_player.0,
+                    name: ind_player.1.clone(),
+                    you: ind_player.0 == index,
+                };
+
+                // We ignore errors at this stage, because we only do this for a better UX
+                let _ = player.send_resp(&resp).await;
+            }
         }
     }
 
