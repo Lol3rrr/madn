@@ -65,29 +65,6 @@
         <div style="grid-column-start: 6; grid-row-start: 7;" class="house house4"></div>
     </div>
 
-    <table>
-        <tr>
-            <th>Color</th>
-            <th>You?</th>
-        </tr>
-        <tr>
-            <th>Yellow</th>
-            <th id="player1_you">False</th>
-        </tr>
-        <tr>
-            <th>Green</th>
-            <th id="player2_you">False</th>
-        </tr>
-        <tr>
-            <th>Red</th>
-            <th id="player3_you">False</th>
-        </tr>
-        <tr>
-            <th>Black</th>
-            <th id="player4_you">False</th>
-        </tr>
-    </table>
-
     <script>
         let player = 0;
         let can_move = false;
@@ -453,8 +430,6 @@
                     if (indicator.you) {
                         player = indicator.player;
                         player_name_elem.classList.add("you");
-
-                        document.querySelector("#player" + (indicator.player + 1) + "_you").textContent = "True";
                     }
                 } else if (json_msg.PlayerDone != undefined) {
                     const player_done = json_msg.PlayerDone;
