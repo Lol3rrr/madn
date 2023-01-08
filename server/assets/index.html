@@ -6,6 +6,7 @@
 
     <title>MADN (Mensch Ärger Dich Nicht)</title>
     <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/dice.css">
 
 </head>
 
@@ -33,6 +34,9 @@
     <span id="message"></span>
 
     <button id="roll" type="button" disabled="true">Roll</button>
+    <div class="dice">
+        <div class="face-elem"></div>
+    </div>
 
     <div class="field">
         <span style="grid-column-start: 1; grid-row-start: 1; transform: translateY(-30px);" id="player1_name"></span>
@@ -87,6 +91,8 @@
     <script>
         let player = 0;
         let can_move = false;
+        let last_rolled = 0;
+        let rolled_recent = false;
 
         const slots = [
             [1, 5],
@@ -408,12 +414,11 @@
                     const rolled = json_msg.Rolled;
                     console.log(rolled);
 
-                    message.textContent = "Rolled " + rolled.value + ".";
-
+                    last_rolled = rolled.value;
                     if (rolled.can_move) {
                         console.log("Click on Player to move");
                         can_move = true;
-                        message.textContent += " Click on Figure to move";
+                        message.textContent = " Click on Figure to move";
                     }
                 } else if (json_msg.State != undefined) {
                     const state = json_msg.State;
@@ -435,18 +440,22 @@
                         }
                     }
 
-                    positionFigures();
+                    if (!rolled_recent) {
+                        positionFigures();
+                    }
                 } else if (json_msg.IndicatePlayer != undefined) {
                     const indicator = json_msg.IndicatePlayer;
 
+                    let name_selector = "#player" + (indicator.player + 1) + "_name";
+                    let player_name_elem = document.querySelector(name_selector);
+                    player_name_elem.textContent = indicator.name;
+
                     if (indicator.you) {
                         player = indicator.player;
+                        player_name_elem.classList.add("you");
 
                         document.querySelector("#player" + (indicator.player + 1) + "_you").textContent = "True";
                     }
-
-                    let name_selector = "#player" + (indicator.player + 1) + "_name";
-                    document.querySelector(name_selector).textContent = indicator.name;
                 } else if (json_msg.PlayerDone != undefined) {
                     const player_done = json_msg.PlayerDone;
 
@@ -476,9 +485,48 @@
         });
 
         roll.addEventListener("click", function (e) {
-            console.log("Roll");
             websocket.send("\"Roll\"");
             this.disabled = true;
+            rolled_recent = true;
+
+            function roll_ease(x) {
+                return 1 - Math.pow(1 - x, 4);
+            }
+
+            let rolls = 0;
+            let timeout = 0;
+            const multiplier = 250;
+            const roll_count = 10;
+            let roll_func = () => {
+                rolls += 1;
+
+                let dummy_roll = Math.ceil(Math.random() * 6);
+                if (rolls >= roll_count) {
+                    dummy_roll = last_rolled;
+                }
+
+                const dice_elem = document.querySelector(".dice");
+
+                while (dice_elem.lastChild) {
+                    dice_elem.removeChild(dice_elem.lastChild);
+                }
+                for (let x = 0; x < dummy_roll; x++) {
+                    let point = document.createElement("div");
+                    point.classList.add("face-elem");
+                    dice_elem.appendChild(point);
+                }
+
+                if (rolls >= roll_count) {
+                    positionFigures();
+                    rolled_recent = false;
+                    return;
+                }
+
+                timeout += (0.8 / roll_count);
+
+                setTimeout(roll_func, roll_ease(timeout) * multiplier);
+            };
+            setTimeout(roll_func, roll_ease(timeout) * multiplier);
         });
 
         const rejoin_clear_btn = document.querySelector("#rejoin-clear");

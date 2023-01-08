@@ -55,6 +55,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(index))
         .route("/style.css", get(style))
+        .route("/dice.css", get(dice_style))
         .route("/create", post(create))
         .route("/join/:session/:name", get(join_handler))
         .route("/rejoin/:game/:key", get(rejoin_handler))
@@ -157,11 +158,13 @@ async fn start_session(
 
     let mut players = Vec::new();
     while let Some((name, ws)) = n_players.recv().await {
+        // Add the newly connected Player
         players.push(GamePlayer::new(name, ws.split()));
         if players.len() == player_count {
             break;
         }
 
+        // Send the information of all the currently joined Players around
         let all_players: Vec<_> = players
             .iter()
             .enumerate()
@@ -220,6 +223,15 @@ async fn style() -> impl IntoResponse {
     let content = include_str!("../assets/style.css");
     #[cfg(debug_assertions)]
     let content = std::fs::read_to_string("assets/style.css").unwrap();
+
+    ([(header::CONTENT_TYPE, "text/css")], content)
+}
+
+async fn dice_style() -> impl IntoResponse {
+    #[cfg(not(debug_assertions))]
+    let content = include_str!("../assets/dice.css");
+    #[cfg(debug_assertions)]
+    let content = std::fs::read_to_string("assets/dice.css").unwrap();
 
     ([(header::CONTENT_TYPE, "text/css")], content)
 }
