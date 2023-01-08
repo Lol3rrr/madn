@@ -331,13 +331,19 @@
         create_btn.addEventListener("click", function (e) {
             window.localStorage.removeItem('rejoin');
 
+            let desired_player_count = Number.parseInt(playercount.value);
+            if (desired_player_count <= 0 || desired_player_count > 4 || Number.isNaN(desired_player_count)) {
+                alert("The Player-Count needs to be between 1-4");
+                return;
+            }
+
             fetch("/create", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    players: Number(playercount.value),
+                    players: desired_player_count,
                 }),
             }).then(function (response) {
                 return response.text();
