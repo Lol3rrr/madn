@@ -40,12 +40,15 @@ struct CreateRequest {
 
 #[tokio::main]
 async fn main() {
+    let machine_log = std::env::var("LOG_MACHINE").is_ok();
+
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "server=trace".into()),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with((machine_log).then(|| tracing_subscriber::fmt::layer().json()))
+        .with((!machine_log).then(|| tracing_subscriber::fmt::layer().pretty()))
         .init();
 
     let state = Arc::new(AppState {
